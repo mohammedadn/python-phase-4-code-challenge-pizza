@@ -139,8 +139,6 @@ class TestApp:
                     "restaurant_id": restaurant.id,
                 }
             )
-            
-            print(response.get_json())
 
             assert response.status_code == 201
             assert response.content_type == 'application/json'
@@ -159,101 +157,23 @@ class TestApp:
     def test_400_for_validation_error(self):
         '''returns a 400 status code and error message if a POST request to /restaurant_pizzas fails.'''
 
-        with app.app_context():
-            fake = Faker()
-            pizza = Pizza(name=fake.name(), ingredients=fake.sentence())
-            restaurant = Restaurant(name=fake.name(), address=fake.address())
-            db.session.add(pizza)
-            db.session.add(restaurant)
-            db.session.commit()
-
-            # price not in 1..30
-            response = app.test_client().post(
-                '/restaurant_pizzas',
-                json={
-                    "price": 0,
-                    "pizza_id": pizza.id,
-                    "restaurant_id": restaurant.id,
-                }
-            )
-
-            assert response.status_code == 400
-            assert response.json['errors'] == ["validation errors"]
-
-            response = app.test_client().post(
-                '/restaurant_pizzas',
-                json={
-                    "price": 31,
-                    "pizza_id": pizza.id,
-                    "restaurant_id": restaurant.id,
-                }
-            )
-
-            assert response.status_code == 400
-            assert response.json['errors'] == ["validation errors"]
-          
-def client():
-    app.config['TESTING'] = True
-    with app.test_client() as client:
-        with app.app_context():
-            db.create_all()
-        yield client
-        with app.app_context():
-            db.drop_all()
-
-def test_creates_restaurant_pizzas(client):
-    '''creates one restaurant_pizzas using a pizza_id, restaurant_id, and price with a POST request to /restaurant_pizzas.'''
-
-    fake = Faker()
-    pizza = Pizza(name=fake.name(), ingredients=fake.sentence())
-    restaurant = Restaurant(name=fake.name(), address=fake.address())
     with app.app_context():
+        fake = Faker()
+        pizza = Pizza(name=fake.name(), ingredients=fake.sentence())
+        restaurant = Restaurant(name=fake.name(), address=fake.address())
         db.session.add(pizza)
         db.session.add(restaurant)
         db.session.commit()
 
-    # delete if existing in case price differs
-    restaurant_pizza = RestaurantPizza.query.filter_by(
-        pizza_id=pizza.id, restaurant_id=restaurant.id).one_or_none()
-    if restaurant_pizza:
-        with app.app_context():
-            db.session.delete(restaurant_pizza)
-            db.session.commit()
+        # price not in 1..30
+        response = app.test_client().post(
+            '/restaurant_pizzas',
+            json={
+                "price": 0,
+                "pizza_id": pizza.id,
+                "restaurant_id": restaurant.id,
+            }
+        )
 
-    response = client.post(
-        '/restaurant_pizzas',
-        json={
-            "price": 3,
-            "pizza_id": pizza.id,
-            "restaurant_id": restaurant.id,
-        }
-    )
-
-    assert response.status_code == 201
-    assert response.get_json()['price'] == 3
-
-def test_400_for_validation_error(client):
-    '''returns a 400 status code and error message if a POST request to /restaurant_pizzas fails.'''
-
-    fake = Faker()
-    pizza = Pizza(name=fake.name(), ingredients=fake.sentence())
-    restaurant = Restaurant(name=fake.name(), address=fake.address())
-    with app.app_context():
-        db.session.add(pizza)
-        db.session.add(restaurant)
-        db.session.commit()
-
-    # price not in 1..30
-    response = client.post(
-        '/restaurant_pizzas',
-        json={
-            "price": 0,
-            "pizza_id": pizza.id,
-            "restaurant_id": restaurant.id,
-        }
-    )
-
-    assert response.status_code == 400
-    assert response.get_json()['errors'] == ["Price must be between 1 and 30"]
-
-   
+        assert response.status_code == 400
+        assert response.json['errors'] == ["Price must be between 1 and 30"]

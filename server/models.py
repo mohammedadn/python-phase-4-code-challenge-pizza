@@ -96,4 +96,3 @@ class RestaurantPizza(db.Model, SerializerMixin):
         if include_restaurant:
             data['restaurant'] = {'id': self.restaurant.id, 'name': self.restaurant.name}
         return data
-# imran.

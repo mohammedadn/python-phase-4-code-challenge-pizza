@@ -3,30 +3,36 @@ from sqlalchemy import MetaData
 from sqlalchemy.orm import validates
 from sqlalchemy_serializer import SerializerMixin
 
+# Setting up metadata with a naming convention for foreign keys
 metadata = MetaData(
     naming_convention={
         "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
     }
 )
 
+# Initialize the SQLAlchemy object with custom metadata
 db = SQLAlchemy(metadata=metadata)
 
+# Define the Restaurant model
 class Restaurant(db.Model, SerializerMixin):
-    __tablename__ = "restaurants"
+    __tablename__ = "restaurants"  # This is the table name in our database
 
+    # These are the columns in the restaurants table
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
     address = db.Column(db.String)
 
-    # add relationship
+    # Setting up a relationship with RestaurantPizza
     pizzas = db.relationship('RestaurantPizza', back_populates='restaurant', cascade="all, delete-orphan")
 
-    # add serialization rules
+    # This rule helps avoid circular references during serialization
     serialize_rules = ('-pizzas.restaurant',)
 
+    # This gives us a nice string representation for debugging
     def __repr__(self):
         return f"<Restaurant {self.name}>"
 
+    # Method to convert a Restaurant instance to a dictionary
     def to_dict(self):
         data = {
             'id': self.id,
@@ -36,22 +42,26 @@ class Restaurant(db.Model, SerializerMixin):
         }
         return data
 
+# Define the Pizza model
 class Pizza(db.Model, SerializerMixin):
-    __tablename__ = "pizzas"
+    __tablename__ = "pizzas"  # This is the table name in our database
 
+    # These are the columns in the pizzas table
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
     ingredients = db.Column(db.String)
 
-    # add relationship
+    # Setting up a relationship with RestaurantPizza
     restaurants = db.relationship('RestaurantPizza', back_populates='pizza', cascade="all, delete-orphan")
 
-    # add serialization rules
+    # This rule helps avoid circular references during serialization
     serialize_rules = ('-restaurants.pizza',)
 
+    # This gives us a nice string representation for debugging
     def __repr__(self):
         return f"<Pizza {self.name}, {self.ingredients}>"
 
+    # Method to convert a Pizza instance to a dictionary
     def to_dict(self):
         data = {
             'id': self.id,
@@ -60,31 +70,35 @@ class Pizza(db.Model, SerializerMixin):
         }
         return data
 
+# Define the RestaurantPizza model
 class RestaurantPizza(db.Model, SerializerMixin):
-    __tablename__ = "restaurant_pizzas"
+    __tablename__ = "restaurant_pizzas"  # This is the table name in our database
 
+    # These are the columns in the restaurant_pizzas table
     id = db.Column(db.Integer, primary_key=True)
     price = db.Column(db.Integer, nullable=False)
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurants.id'))
     pizza_id = db.Column(db.Integer, db.ForeignKey('pizzas.id'))
 
-    # add relationships
+    # Setting up relationships with Restaurant and Pizza
     restaurant = db.relationship('Restaurant', back_populates='pizzas')
     pizza = db.relationship('Pizza', back_populates='restaurants')
 
-    # add serialization rules
+    # This rule helps avoid circular references during serialization
     serialize_rules = ('-restaurant.pizzas', '-pizza.restaurants')
 
-    # add validation
+    # Validation for the price column to ensure it's between 1 and 30
     @validates('price')
     def validate_price(self, key, price):
         if not (1 <= price <= 30):
             raise ValueError("Price must be between 1 and 30")
         return price
 
+    # This gives us a nice string representation for debugging
     def __repr__(self):
         return f"<RestaurantPizza ${self.price}>"
 
+    # Method to convert a RestaurantPizza instance to a dictionary
     def to_dict(self, include_restaurant=True):
         data = {
             'id': self.id,
